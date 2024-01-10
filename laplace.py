@@ -28,6 +28,8 @@ for row in range(m.ncorners):
     if liste_max[hor_id] < m.V[i][1]:
         liste_max[hor_id] = m.V[i][1]
 
+print(liste_max)
+
 for dim in range(2): # solve for x first, then for y
     A = scipy.sparse.lil_matrix((nboundary + m.ncorners, m.nverts))
     b = [0] * A.shape[0]
@@ -45,15 +47,26 @@ for dim in range(2): # solve for x first, then for y
             i = m.org(cor)
             hor_id = attr.horizon_id[cor]
             if hor_id >= 0:
-                A[cor, i] = 1
-                b[cor] = liste_max[hor_id]
+                A[cor, i] = 10
+                b[cor] = 10*liste_max[hor_id]
         row = cor + 1
 
-    for (i,v) in enumerate(m.V):
-        if m.on_border(i):
-            A[row, i] = 1  # quadratic penalty to lock boundary vertices
-            b[row] = v[dim]
+    list_vertex = []
+
+    for co in range(m.ncorners):
+        i = m.org(co)
+        if (m.on_border(i) and attr.horizon_id[co] == -1 and i not in list_vertex):
+            list_vertex.append(i)
+            print("row", row)
+            A[row, i] = 1 * 100 # quadratic penalty to lock boundary vertices
+            b[row] = m.V[i][dim] * 100
             row += 1
+
+    """for (i,v) in enumerate(m.V):
+        if m.on_border(i):
+            A[row, i] = 1 * 100 # quadratic penalty to lock boundary vertices
+            b[row] = v[dim] * 100
+            row += 1"""
 
 
     A = A.tocsr() # convert to compressed scorrse row format for faster matrix-vector muliplications
@@ -61,6 +74,6 @@ for dim in range(2): # solve for x first, then for y
     for i in range(m.nverts): # apply the computed flattening
         m.V[i][dim] = x[i]
 
-m.write_vtk("output1.vtk")
+m.write_vtk("output_bor.vtk")
 #print(m) # output the deformed mesh
 
