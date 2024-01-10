@@ -20,32 +20,39 @@ for n in attr.horizon_id:
     if nb_horizon < n:
         nb_horizon = n
 
+liste_max = [-100000 for _ in range(nb_horizon + 2)]
+
+for row in range(m.ncorners):
+    i = m.org(row)
+    hor_id = attr.horizon_id[row]
+    if liste_max[hor_id] < m.V[i][1]:
+        liste_max[hor_id] = m.V[i][1]
+
 for dim in range(2): # solve for x first, then for y
     A = scipy.sparse.lil_matrix((nboundary + m.ncorners, m.nverts))
     b = [0] * A.shape[0]
-    liste_max = [-100000 for _ in range(nb_horizon + 2)]
+
 
     for row in range(m.ncorners):
         i = m.org(row)
         j = m.dst(row)
         A[row, j] = 1
         A[row, i] = -1
-        hor = attr.horizon_id[row]
-        if liste_max[hor] < m.V[i][0]:
-            liste_max[hor] = m.V[i][0]
+        b[row] = 0.0001
 
-    for cor in range(m.ncorners):
-        i = m.org(cor)
-        hor = attr.horizon_id[cor]
-        if hor >= 0:
-            A[cor, i] = 1
-            b[cor] = liste_max[hor]
+    if dim == 1:
+        for cor in range(m.ncorners):
+            i = m.org(cor)
+            hor_id = attr.horizon_id[cor]
+            if hor_id >= 0:
+                A[cor, i] = 1
+                b[cor] = liste_max[hor_id]
+        row = cor + 1
 
-    row = cor + 1
     for (i,v) in enumerate(m.V):
         if m.on_border(i):
-            A[row, i] = 100  # quadratic penalty to lock boundary vertices
-            b[row] = v[dim]*100
+            A[row, i] = 1  # quadratic penalty to lock boundary vertices
+            b[row] = v[dim]
             row += 1
 
 
