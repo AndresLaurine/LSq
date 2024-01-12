@@ -20,7 +20,9 @@ for n in attr.horizon_id:
     if nb_horizon < n:
         nb_horizon = n
 
+
 liste_max = [-100000 for _ in range(nb_horizon + 2)]
+liste_bord = [[100,100],[-100,-100]]
 
 for row in range(m.ncorners):
     i = m.org(row)
@@ -28,12 +30,16 @@ for row in range(m.ncorners):
     if liste_max[hor_id] < m.V[i][1]:
         liste_max[hor_id] = m.V[i][1]
 
-print(liste_max)
-
+    if m.on_border(i):
+        for k in range(2):
+            if m.V[i][k] < liste_bord[0][k]:
+                liste_bord[0][k] = m.V[i][k]
+            if m.V[i][k] > liste_bord[1][k]:
+                liste_bord[1][k] = m.V[i][k]
+print(liste_bord)
 for dim in range(2): # solve for x first, then for y
     A = scipy.sparse.lil_matrix((nboundary + m.ncorners, m.nverts))
     b = [0] * A.shape[0]
-
 
     for row in range(m.ncorners):
         i = m.org(row)
@@ -55,11 +61,12 @@ for dim in range(2): # solve for x first, then for y
 
     for co in range(m.ncorners):
         i = m.org(co)
-        if (m.on_border(i) and attr.horizon_id[co] == -1 and i not in list_vertex):
-            list_vertex.append(i)
-            A[row, i] = 1 * 100 # quadratic penalty to lock boundary vertices
-            b[row] = m.V[i][dim] * 100
-            row += 1
+        if (m.on_border(i) and attr.horizon_id[co] == -1 and (i not in list_vertex)):
+            if ((m.V[i][dim] <= liste_bord[0][dim] + 0.05 and m.V[i][dim] >= liste_bord[0][dim] - 0.05) or (m.V[i][dim] <= liste_bord[1][dim] + 0.05 and m.V[i][dim] >= liste_bord[1][dim] - 0.05 )):
+                list_vertex.append(i)
+                A[row, i] = 1 * 10 # quadratic penalty to lock boundary vertices
+                b[row] = m.V[i][dim] * 10
+                row += 1
 
     """for (i,v) in enumerate(m.V):
         if m.on_border(i):
@@ -73,6 +80,6 @@ for dim in range(2): # solve for x first, then for y
     for i in range(m.nverts): # apply the computed flattening
         m.V[i][dim] = x[i]
 
-m.write_vtk("horrizontal.vtk")
+m.write_vtk("horizontal_bords_specifique.vtk")
 #print(m) # output the deformed mesh
 
