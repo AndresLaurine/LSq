@@ -9,11 +9,11 @@ nboundary = sum(m.boundary)
 
 model = "shell"
 attr = importlib.import_module(model + ".attributes")
-
+"""
 for c in range(m.ncorners): # lift all vertices of all horizons
     if attr.horizon_id[c]>=0:
         height = (1+attr.horizon_id[c])/37.76 # arbitrarily chosen coeff to get a visually nice result
-        m.V[m.org(c)][2] = m.V[m.dst(c)][2] = height
+        m.V[m.org(c)][2] = m.V[m.dst(c)][2] = height"""
 
 nb_horizon = 0
 for n in attr.horizon_id:
@@ -57,7 +57,6 @@ for dim in range(2): # solve for x first, then for y
         i = m.org(co)
         if (m.on_border(i) and attr.horizon_id[co] == -1 and i not in list_vertex):
             list_vertex.append(i)
-            print("row", row)
             A[row, i] = 1 * 100 # quadratic penalty to lock boundary vertices
             b[row] = m.V[i][dim] * 100
             row += 1
@@ -74,6 +73,6 @@ for dim in range(2): # solve for x first, then for y
     for i in range(m.nverts): # apply the computed flattening
         m.V[i][dim] = x[i]
 
-m.write_vtk("output_bor.vtk")
+m.write_vtk("horrizontal.vtk")
 #print(m) # output the deformed mesh
 
