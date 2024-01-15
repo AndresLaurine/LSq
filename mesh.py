@@ -134,6 +134,3 @@ LOOKUP_TABLE default""" % self.nverts)
                 for v in scalar_field:
                     print("%f " % v, end="")
             sys.stdout = original_stdout # Reset the standard output to its original value
-
-
-

@@ -4,6 +4,13 @@ import scipy.sparse
 from scipy.sparse.linalg import lsmr
 import importlib
 
+def is_edge_present(a, b, h):
+    for c in range(h.ncorners):
+        vi = h.V[h.org(c)]
+        vj = h.V[h.dst(c)]
+        if (np.array_equal(vi, a) and np.array_equal(vj, b)) or (np.array_equal(vi, b) and np.array_equal(vj, a)):
+            return True
+    return False
 
 model = "shell"
 m = Mesh(model+"/slice.obj")
@@ -25,7 +32,7 @@ for n in attr.horizon_id:
         
 liste_max = [-100000 for _ in range(nb_horizon + 2)]
 liste_bord = [[100,100],[-100,-100]]
-
+################################ HORIZON MANAGEMENT ################################
 for row in range(m.ncorners):
 
     ### creation of a list of all the y_max for each horizon
@@ -66,16 +73,42 @@ for dim in range(2): # solve for x first, then for y
                 A[cor, i] = 10
                 b[cor] = 10*liste_max[hor_id]
         row = cor + 1
-    ###
+################################ FAULT MANAGEMENT ################################
+    # Initialize a list to store the vertical positions for each fault
+    liste_fault = [0.0] * (nb_horizon + 1)
+    # Assuming horizon_meshes are created similarly to the original script
+    horizon_meshes = [Mesh(model + "/horizon" + str(i) + ".obj") for i in range(nb_horizon + 1)]
 
-    ### verticalization of the faults 
+    # Associate faults with horizons based on adjacency to horizon edges
+    for cor in range(m.ncorners):
+        i = m.org(cor)
+        if attr.is_fault[cor]:  # Check if the current corner is part of a fault
+            print("Corner ", cor, " is part of a fault.")
+            for nh in range(len(horizon_meshes)):
+                if is_edge_present(m.V[i], m.V[m.dst(cor)], horizon_meshes[nh]):
+                    # Assign the horizon ID to the fault
+                    attr.horizon_id[cor] = nh
+                    liste_fault[nh] = m.V[i][dim]
+    print("Length of the fault list: ", len(liste_fault))
+
+    # Verticalization of the faults
+    if dim == 0:
+        for cor in range(m.ncorners):
+            i = m.org(cor)
+            if attr.is_fault[cor]:  # Check if the current corner is part of a fault
+                A[row, i] = 10
+                # Use the associated horizon ID to determine the vertical position for the fault
+                b[row] = 10 * liste_fault[attr.horizon_id[cor]]
+                row += 1
+
+    """### verticalization of the faults 
         # attention : les failles sont concidérées comme des bords !    
     if dim == 0:
         for cor in range(m.ncorners):
             i = m.org(cor)
             if attr.is_fault:
                 A[cor, i] = 10
-                b[cor] = 10 * 
+                b[cor] = 10 *  """
 
 
     # lock the boundaries        
@@ -95,6 +128,6 @@ for dim in range(2): # solve for x first, then for y
     for i in range(m.nverts): # apply the computed flattening
         m.V[i][dim] = x[i]
 
-m.write_vtk(model + "_horizontal_bords_specifique.vtk")
+m.write_vtk(model + "_horizontal_bords.vtk")
 #print(m) # output the deformed mesh
 
